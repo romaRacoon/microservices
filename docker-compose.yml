@@ -45,30 +45,93 @@ services:
     command:
       - start-dev
 
-#  prometheus:
-#    image: prom/prometheus
-#    ports:
-#      - "9090:9090"
-#    volumes:
-#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-#
-#  grafana:
-#    hostname: grafana
-#    image: grafana/grafana
-#    ports:
-#      - 4000:3000
-#
-#  jaeger:
-#    hostname: jaeger
-#    image: jaegertracing/all-in-one:1.23
-#    ports:
-#      - 5775:5775/udp
-#      - 6831:6831/udp
-#      - 6832:6832/udp
-#      - 5778:5778
-#      - 16686:16686
-#      - 14268:14268
-#      - 4250:14250
-#      - 9411:9411
-#    environment:
-#      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./docker-config.yaml:/etc/promtail/docker-config.yaml
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers
+    networks:
+      - app-network
+    command: -config.file=/etc/promtail/docker-config.yaml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - GF_EXPLORE_ENABLED=true
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert.yml:/etc/prometheus/alert.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+    links:
+      - alertmanager:alertmanager
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.max-block-duration=30m'
+      - '--storage.tsdb.min-block-duration=30m'
+      - '--web.enable-lifecycle'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  node:
+    image: prom/node-exporter:latest
+    container_name: node
+    ports:
+      - "9100:9100"
+    networks:
+      - app-network
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    restart: always
+    networks:
+      - app-network
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  prometheus:
+    name: prometheus
+  grafana-storage:
+    driver: local

@@ -15,7 +15,7 @@ database.Base.metadata.create_all(bind=database.engine)
 
 # Данные для подключения к Keycloak
 KEYCLOAK_URL = "http://keycloak:8080/"
-KEYCLOAK_CLIENT_ID = "boyarkov"
+KEYCLOAK_CLIENT_ID = "artemenkov"
 KEYCLOAK_REALM = "myrealm"
 KEYCLOAK_CLIENT_SECRET = "T678RfL6Jxtk5zmNQygPAn7ahcTnPzTr"
 

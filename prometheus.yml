@@ -1,9 +1,26 @@
 global:
-  scrape_interval: 15s # when Prometheus is pulling data from exporters etc
-  evaluation_interval: 30s # time between each evaluation of Prometheus' alerting rules
+  scrape_interval: 10s
+  
+rule_files:
+  - "alert.yml"
+
+alerting:
+  alertmanagers:
+    - scheme: http
+      static_configs:
+        - targets:
+            - 'alertmanager:9093'
 
 scrape_configs:
-  - job_name: client # your project name
+  - job_name: 'prometheus'
     static_configs:
-      - targets:
-          - client:6969
+      - targets: ['prometheus:9090']
+
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node:9100']
+

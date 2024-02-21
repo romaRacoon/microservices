@@ -1,0 +1,93 @@
+groups:
+  - name: Critical alerts
+    rules:
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes > 4000000000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокое использование памяти в контейнере ({{ $labels.container }})"
+          description: "Контейнер {{ $labels.container }} использует более 4GB памяти."
+
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[1m]) > 0.9
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая загрузка CPU контейнера ({{ $labels.container }})"
+          description: "Контейнер {{ $labels.container }} имеет высокую загрузку CPU."
+
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{fstype!=""} / node_filesystem_size_bytes{fstype!=""}) < 0.1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Низкое свободное место на диске на узле ({{ $labels.instance }})"
+          description: "На узле {{ $labels.instance }} осталось менее 10% свободного места на диске."
+
+      - alert: HighNetworkTraffic
+        expr: sum(rate(node_network_receive_bytes_total[5m])) BY (instance) > 10000000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая сетевая активность на узле ({{ $labels.instance }})"
+          description: "Сетевая активность на узле {{ $labels.instance }} превышает 10MB/s."
+
+      - alert: HostOutOfMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host out of memory (instance {{ $labels.instance }})"
+          description: "Node memory is filling up (< 5% left)\n  VALUE = {{ $value }}\n LABELS = {{ $labels }}"
+
+      - alert: HostOutOfDiskSpace
+        expr: (node_filesystem_avail_bytes * 100 / node_filesystem_size_bytes < 10) and node_filesystem_readonly == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host out of disk space (instance {{ $labels.instance }})"
+          description: "Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+    
+      - alert: PrometheusTargetMissing
+        expr: up == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "One of the instances is down"
+          description: "A Prometheus target has disappeared. An exporter might be crashed."
+    
+      - alert: PrometheusAllTargetsMissing
+        expr: count by (job) (up) == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus all targets missing"
+          description: "A Prometheus job does not have living target anymore."
+    
+      - alert: HostUnusualNetworkThroughputIn
+        expr: sum by (instance) (rate(node_network_receive_bytes_total[20s])) / 1024 / 1024 > 1
+        for: 20s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host unusual network throughput."
+          description: "Host network interfaces are probably receiving too much data. Over 1 mbps"
+    
+      - alert: HostHighCpuLoad
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 50
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host high CPU load over 50%"
+          description: "CPU load is > 50%"
+    
